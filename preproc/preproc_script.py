@@ -27,6 +27,7 @@ for subject in subjects:
     #Run preprocessing when asked
     if "preprocess" in proc_to_run:
         os.system( f"python3 1_preprocess.py '{subject}'" )
+        print(f"Done preprocessing on {subject}")
 
     '''
     ==================== NOTE TO MYSELF =====================
@@ -39,7 +40,9 @@ for subject in subjects:
     #Run coregistration when asked
     if "coreg" in proc_to_run:
         os.system( f"python3 2_coreg.py '{subject}'" )
+        print(f"Done coregistration on {subject}")
 
     #Run source-reconstruction when asked
     if "source_recon" in proc_to_run:
         os.system( f"python3 3_source_recon.py '{subject}'" )
+        print(f"Done source_recon on {subject}")

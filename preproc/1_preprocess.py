@@ -29,7 +29,8 @@ SUBJ_PREPROC_DIR = path.join(DERIV_DIR, subject, "preproc")
 if path.isdir(SUBJ_PREPROC_DIR)==False:
     path.os.mkdir(SUBJ_PREPROC_DIR)
 
-#%% ================== sub-function =================
+#%% ================== sub-function ===================
+# Auto-reject with no specific ECG channels
 def ica_autoreject_no_ecg(dataset, userargs):
     import numpy as np
 
