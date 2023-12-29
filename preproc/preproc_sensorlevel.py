@@ -1,18 +1,38 @@
 """Preprocessing of the CTF data at sensor-level. 
         - preprocess (detect bads, downsample, and etc.)
         - run ICA (further clean up EOG- and ECG-related artefacts)
+
+    DONE:
+        ['Sub203','Sub204','Sub205','Sub206','Sub207',
+        'Sub208','Sub209','Sub210','Sub211','Sub212',
+        'Sub214','Sub215','Sub217','Sub220','Sub221',
+        'Sub222','Sub223','Sub225','Sub226','Sub227',
+        'Sub228','Sub229','Sub232','Sub234','Sub236',
+        'Sub238','Sub239','Sub241','Sub243','Sub244',
+        'Sub246']
 """
 
 import os
 import glob
+import matplotlib.pyplot as plt
 from osl import preprocessing, utils
 from dask.distributed import Client
 
 # Define subjects (data) to process
-subjects = ['Sub203','Sub204']#,'Sub205','Sub206','Sub207'] #'Sub207'
+'''
+subjects = ['Sub204','Sub205','Sub206','Sub207',
+        'Sub208','Sub209','Sub210','Sub211','Sub212',
+        'Sub214','Sub215','Sub217','Sub220','Sub221',
+        'Sub222','Sub223','Sub225','Sub226','Sub227',
+        'Sub228','Sub229','Sub232','Sub234','Sub236',
+        'Sub238','Sub239','Sub241','Sub243','Sub244',
+        'Sub246']
+'''
+
+subjects = ['Sub216']
 
 # Define procedures to apply
-proc_to_run = ['ica'] #'preprocess']#, 'ica']
+proc_to_run = ['artefact_reject'] #'ica'] #'preprocess']#, '
 
 # Directories
 PROJ_DIR = "/Volumes/ExtDisk/DATA/3018041.02"
@@ -78,6 +98,7 @@ def define_ICA_input_and_output(preproc_outfnames, preproc_outdirs ):
     return SUBJ_ICA_INPUTS, SUBJ_ICA_OUTPUTS ###SUBJ_ICA_OUTDIRS
 
 #%% ================== sub-function ===================
+"""======================== OLD ===========================
 # Auto-reject with no specific ECG channels
 def ica_autoreject_no_ecg(dataset, userargs):
     
@@ -94,14 +115,11 @@ def ica_autoreject_no_ecg(dataset, userargs):
     # User specified arguments and their defaults
     eogmeasure = userargs.pop("eogmeasure", "correlation")
     eogthreshold = userargs.pop("eogthreshold", 0.35)
-    ###ecgmethod = userargs.pop("ecgmethod", "ctps")
-    ###ecgthreshold = userargs.pop("ecgthreshold", "auto")
     remove_components = userargs.pop("apply", True)
 
     # Reject components based on the EOG channel
     eog_indices, eog_scores = dataset["ica"].find_bads_eog(
-        dataset["raw"], threshold=eogthreshold, measure=eogmeasure,
-    )
+        dataset["raw"], threshold=eogthreshold, measure=eogmeasure)
     dataset["ica"].exclude.extend(eog_indices)
     logger.info("Marking {0} as EOG ICs".format(len(eog_indices)))
 
@@ -115,10 +133,8 @@ def ica_autoreject_no_ecg(dataset, userargs):
     '''
 
     # Reject components based on the ECG channel
-    ch_mag = np.array(dataset["raw"].ch_names)[mne.pick_types(dataset['raw'].info, meg="mag")]
     ecg_indices, ecg_scores = dataset["ica"].find_bads_ecg(
-        dataset["raw"], ch_name=ch_mag, threshold='auto', method='ctps'
-    )
+        dataset["raw"], threshold='auto', method='ctps')
     dataset["ica"].exclude.extend(ecg_indices)
     logger.info("Marking {0} as ECG ICs".format(len(ecg_indices)))
 
@@ -130,7 +146,7 @@ def ica_autoreject_no_ecg(dataset, userargs):
         logger.info("Components were not removed from raw data")
 
     return dataset
-
+"""
 
 
 #%% The inputs and outputs
@@ -156,7 +172,7 @@ for subject in subjects:
 
 
 #%% Do the work in batches
-#===============================================
+#%%===============================================
 #
 # 1. Run preprocessing
 #
@@ -189,26 +205,31 @@ if "preprocess" in proc_to_run:
             outnames=outfiles,
             outdir=PREPROC_DIR,
             overwrite=True,
-            dask_client=True,
+            dask_client=False, #True,
         )
 
 
-#===============================================
+#%%===============================================
 #
 # 2. Run ICA on the preprocessed raw data
 #
 #===============================================
 if "ica" in proc_to_run:
 
+    if "preprocess" in proc_to_run:
+        import time
+        for i in range(len(subjects)):
+            time.sleep(60*5)  #Makes Python wait for X seconds in each iteration
+
     #define fnames and directories
-    infiles, outfiles = define_ICA_input_and_output( outfiles, outdirs )
+    in_files, out_files = define_ICA_input_and_output( outfiles, outdirs )
 
     #settings for ICA
+    #when the recording is long, specifying the exact number of components speeds up the ICA
     config = """
         preproc:
-        - ica_raw: {picks: mag, n_components: 0.99}
-        - ica_autoreject_no_ecg: {picks: mag, eogmeasure: correlation, eogthreshold: auto}
-        - interpolate_bads: {}
+        - ica_raw: {picks: mag, n_components: 90}
+        - ica_autoreject: {apply: False}
     """
 
     if __name__ == "__main__":
@@ -220,11 +241,49 @@ if "ica" in proc_to_run:
         #batch processing
         preprocessing.run_proc_batch(
             config,
-            files=infiles,
-            outnames=outfiles,
+            files=in_files,
+            outnames=out_files,
             outdir=CLEANED_DIR,
             overwrite=True,
-            dask_client=True,
-            extra_funcs=[ica_autoreject_no_ecg],
+            dask_client=False, #True,
         )
 
+
+#%%====================================================
+#
+# 3. Check and remove EOG/ECG related ICs
+#
+#====================================================
+if "artefact_reject" in proc_to_run:
+    
+    _, fnames = define_ICA_input_and_output( outfiles, outdirs )
+    
+    out_ica     = [ glob.glob(f"{CLEANED_DIR}/{os.path.splitext(f)[0]}/*_cleaned_ica.fif")[0] for f in fnames ]
+    out_cleaned = [ glob.glob(f"{CLEANED_DIR}/{os.path.splitext(f)[0]}/*_cleaned_preproc_raw.fif")[0] for f in fnames ]
+    
+    report_dirs = [ glob.glob(f"{CLEANED_DIR}/report/{f[:6]}*")[0] for f in fnames ]
+    
+    for out_fname, report_dir in zip(out_cleaned, report_dirs):
+        
+        # Load preprocessed fif and ICA
+        dataset = preprocessing.read_dataset(out_fname, preload=True)
+        raw = dataset["raw"]
+        ica = dataset["ica"]
+
+        try:
+            # Mark bad ICA components interactively
+            preprocessing.plot_ica(ica, raw)
+        except:
+            print(ica.exclude)
+            # Plot properties of the removed ICs
+            plt.close('all')
+            figs = ica.plot_properties(raw, picks=ica.exclude, show=False)
+            for idx, fig in enumerate(figs):
+                fig.savefig( f"{report_dir}/removed_IC{idx}" )
+
+        # Apply ICA
+        raw = ica.apply(raw)
+        
+        # Save cleaned data
+        dataset["raw"].save(out_fname, overwrite=True)
+        

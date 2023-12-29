@@ -28,6 +28,10 @@ for subject in subjects:
     if "preprocess" in proc_to_run:
         os.system( f"python3 1_preprocess.py '{subject}'" )
         print(f"Done preprocessing on {subject}")
+    
+    #Run ICA on the preprocessed data
+    if "ica" in proc_to_run:
+        os.system()
 
     '''
     ==================== NOTE TO MYSELF =====================

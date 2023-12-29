@@ -104,9 +104,6 @@ config = """
     - bad_segments: {segment_len: 500, picks: mag, significance_level: 0.1}
     - bad_segments: {segment_len: 500, picks: mag, mode: diff, significance_level: 0.1}
     - bad_channels: {picks: mag, significance_level: 0.1}
-    - ica_raw: {picks: mag, n_components: 0.99}
-    - ica_autoreject_no_ecg: {picks: mag, eogmeasure: correlation, eogthreshold: auto}
-    - interpolate_bads: {}
 """
 
 # Run batch preprocessing
@@ -117,5 +114,12 @@ preprocessing.run_proc_batch(
     outdir=SUBJ_PREPROC_DIR,
     overwrite=True,
     dask_client=False,
-    extra_funcs=[ica_autoreject_no_ecg],
 )
+
+
+#config = """
+#    preproc:
+#    - ica_raw: {picks: mag, n_components: 0.99}
+#    - ica_autoreject_no_ecg: {picks: mag, eogmeasure: correlation, eogthreshold: auto}
+#    - interpolate_bads: {}
+#"""
