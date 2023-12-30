@@ -5,11 +5,11 @@
     DONE:
         ['Sub203','Sub204','Sub205','Sub206','Sub207',
         'Sub208','Sub209','Sub210','Sub211','Sub212',
-        'Sub214','Sub215','Sub217','Sub220','Sub221',
-        'Sub222','Sub223','Sub225','Sub226','Sub227',
-        'Sub228','Sub229','Sub232','Sub234','Sub236',
-        'Sub238','Sub239','Sub241','Sub243','Sub244',
-        'Sub246']
+        'Sub214','Sub215','Sub216','Sub217','Sub220',
+        'Sub221','Sub222','Sub223','Sub225','Sub226',
+        'Sub227','Sub228','Sub229','Sub232','Sub234',
+        'Sub236','Sub238','Sub239','Sub241','Sub243',
+        'Sub244','Sub246']
 """
 
 import os
@@ -19,20 +19,18 @@ from osl import preprocessing, utils
 from dask.distributed import Client
 
 # Define subjects (data) to process
-'''
-subjects = ['Sub204','Sub205','Sub206','Sub207',
+subjects = ['Sub203','Sub204','Sub205','Sub206','Sub207',
         'Sub208','Sub209','Sub210','Sub211','Sub212',
-        'Sub214','Sub215','Sub217','Sub220','Sub221',
-        'Sub222','Sub223','Sub225','Sub226','Sub227',
-        'Sub228','Sub229','Sub232','Sub234','Sub236',
-        'Sub238','Sub239','Sub241','Sub243','Sub244',
-        'Sub246']
-'''
+        'Sub214','Sub215','Sub216','Sub217','Sub220',
+        'Sub221','Sub222','Sub223','Sub225','Sub226',
+        'Sub227','Sub228','Sub229','Sub232','Sub234',
+        'Sub236','Sub238','Sub239','Sub241','Sub243',
+        'Sub244','Sub246']
 
-subjects = ['Sub216']
+#subjects = ['Sub216']
 
 # Define procedures to apply
-proc_to_run = ['artefact_reject'] #'ica'] #'preprocess']#, '
+proc_to_run = ['preprocess']#, ''artefact_reject'] #'ica'] #
 
 # Directories
 PROJ_DIR = "/Volumes/ExtDisk/DATA/3018041.02"
@@ -182,8 +180,8 @@ if "preprocess" in proc_to_run:
     #settings for preprocessing (up till ICA)
     config = """
         preproc:
-        - set_channel_types: {'UADC005-4302':eog, "UADC006-4302":eog}
-        - pick: {picks: [mag, eog]}
+        - set_channel_types: {'UADC005-4302':eog, "UADC006-4302":eog, "UPPT001":stim}
+        - pick: {picks: [mag, eog, stim]}
         - filter: {l_freq: 0.25, h_freq: 125, method: iir, iir_params: {order: 5, ftype: butter}}
         - notch_filter: {freqs: 50 100}
         - resample: {sfreq: 250}
@@ -263,7 +261,7 @@ if "artefact_reject" in proc_to_run:
     
     report_dirs = [ glob.glob(f"{CLEANED_DIR}/report/{f[:6]}*")[0] for f in fnames ]
     
-    for out_fname, report_dir in zip(out_cleaned, report_dirs):
+    for out_fname, out_ica_fname, report_dir in zip(out_cleaned, out_ica, report_dirs):
         
         # Load preprocessed fif and ICA
         dataset = preprocessing.read_dataset(out_fname, preload=True)
@@ -275,6 +273,7 @@ if "artefact_reject" in proc_to_run:
             preprocessing.plot_ica(ica, raw)
         except:
             print(ica.exclude)
+            ica.save(out_ica_fname, overwrite=True)
             # Plot properties of the removed ICs
             plt.close('all')
             figs = ica.plot_properties(raw, picks=ica.exclude, show=False)
