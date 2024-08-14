@@ -1,6 +1,8 @@
 %
 % Run GLMM to see if pre-stim alpha power predicts d' or criterion.
 %
+% In the GLMM, the two priming types were used as random factors.
+% 
 % JY (Jan 2024)
 
 % clearvars; close all; clc;
@@ -34,7 +36,6 @@ fprintf('We will apply GLMM (with vpath_thresh=%s) of state #%d of the %d-states
 %% filename and directories
 % directory and fnames
 CODE_DIR = '/Volumes/ExtDisk/analysis_DondersData/3018041.02/vpow2beh';
-CSV_DIR  = fullfile( CODE_DIR, 'csv_stateprob_parc9975' );
 addpath( genpath(CODE_DIR) );
 
 % csv filename 
