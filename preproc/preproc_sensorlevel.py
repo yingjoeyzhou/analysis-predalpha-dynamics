@@ -30,7 +30,7 @@ subjects = ['Sub203','Sub204','Sub205','Sub206','Sub207',
 #subjects = ['Sub216']
 
 # Define procedures to apply
-proc_to_run = ['preprocess']#, ''artefact_reject'] #'ica'] #
+proc_to_run = ['artefact_reject'] #'preprocess']#, ' #'ica'] #
 
 # Directories
 PROJ_DIR = "/Volumes/ExtDisk/DATA/3018041.02"
