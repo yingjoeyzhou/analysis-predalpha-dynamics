@@ -41,7 +41,6 @@ fprintf('We will apply GLMM (with vpath_thresh=%s, nPermute=%s) of state #%d of 
 %% filename and directories
 % directory and fnames
 CODE_DIR = '/Volumes/ExtDisk/analysis_DondersData/3018041.02/vpow2beh';
-CSV_DIR  = fullfile( CODE_DIR, 'csv_stateprob_parc9975' );
 addpath( genpath(CODE_DIR) );
 
 % csv filename 
