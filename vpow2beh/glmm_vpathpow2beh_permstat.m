@@ -37,6 +37,10 @@ end
 fprintf('We will apply GLMM (with vpath_thresh=%s, nPermute=%s) of state #%d of the %d-states model.\n', ...
                     num2str(vpath_thresh), num2str(nPermute), ik, K);
 
+% Run the fits with "warning('off')"
+warning('off');
+disp( 'We will run the fits with "warning(''off'')".' );
+                
 
 %% filename and directories
 % directory and fnames
@@ -64,7 +68,8 @@ vec_primetype= cellfun(@(x) x(1)=='c', data.condition, 'uniformoutput',true); %g
 vec_yes      = data.report;
 vec_presence = data.stim_presence;
 vec_subject  = data.subject;
-n = numel( unique(vec_subject) );
+subjects     = unique(vec_subject);
+n = numel( subjects );
 X = horzcat( vec_yes, vec_presence, vec_subject, vec_primetype );
 
 %pre-allocate memory
@@ -73,22 +78,24 @@ beta = struct('Dp',[], 'C',[]);
 
 %prepare for the permuted samples
 if nPermute>1
+    %pre-allocate memory
     statBS = struct('Fstat',[], 'Pval',[]);
     betaBS = struct('Dp',[], 'C',[]);
-    Ymat = nan( size(X,1), nPermute );
-    Subj = unique(vec_subject);
-    nsubj = numel(Subj);
-    for b = 1:nPermute
-        y_shuffle = [];
-        for iS = 1:nsubj %Shuffling should not change subject-specific performance
-            y_shuffle = [y_shuffle; Shuffle( vec_yes( vec_subject==Subj(iS) ) )];
+    
+    %permute the trials (within-subject)
+    Idxmat = nan( size(X,1), nPermute);
+    for iS = 1:n
+        sel = (vec_subject==subjects(iS));
+        idx = find(sel);
+        tmp = sum(sel);
+        for b = 1:nPermute
+            Idxmat(idx,b) = Shuffle(idx);
         end
-        Ymat(:,b) = y_shuffle;
     end
 end
 
 %loop through diff. time points
-func = 'y ~ 1+S*P*V + (1+S | subject:primetype)';
+func = 'y ~ 1+S*P*A + (1+S | subject:primetype)';
 for iT = 1:numel(tvec)
     
     pname = powtnames{iT};
@@ -110,20 +117,23 @@ for iT = 1:numel(tvec)
     cov_table  = cell(2,1);
     
     t = array2table( horzcat(X,alpha,vpath), ...
-                        'VariableNames',{'y', 'S', 'subject', 'primetype', 'P', 'V'});
+                        'VariableNames',{'y', 'S', 'subject', 'primetype', 'P', 'A'});
     
     % Test the effect of alphapow on y (i.e., probability report yes) while
     % controling for stimulus presence and test for interaction effects.
     % Model random subject intercepts and slopes.
     % Intercept is modeled implicitly both at the group and subject level.
     t.S         = categorical( t.S ); %dummy-code
-    t.V         = categorical( t.V ); %dummy-code ON vs. OFF
+    t.A         = categorical( t.A ); %dummy-code ON vs. OFF
     t.subject   = categorical( t.subject ); %dummy-code
     t.primetype = categorical( t.primetype ); %dummy-code
     
     
     
     % ============= Do the fit for the real data =============
+    % Track time
+    tracktime = tic();
+    
     % Do the fit
     m = fitglme( t, func,...
             'Distribution', 'Binomial',...
@@ -148,8 +158,8 @@ for iT = 1:numel(tvec)
     Fmat = nan(1,size(stat.Fstat,2), nPermute);
     for b = 1:nPermute
         
-        % Read in the shuffled responses
-        t.y = Ymat(:,b);
+        % Read in the shuffled normalized power
+        t.P = t.P( Idxmat(:,b) );
     
         % Do the fit
         m = fitglme( t, func,...
@@ -173,15 +183,17 @@ for iT = 1:numel(tvec)
     statBS.Fstat = cat(1, statBS.Fstat, Fmat );
     
 
-    %show progress
-    fprintf('\nDone with %d out of %d time point..',iT,numel(tvec));
+    % Show progress
+    fprintf('\nDone with %d out of %d time points..',iT,numel(tvec));
+    
+    % Track time
+    toc(tracktime);
     
 end
 
 
 %% Save the results
 save(sprintf('GLMM_BS_pow_x_vpath_bestrun_%dth_of_%d_states.mat', ik, K));
-
 
 
 %% Do the plots: one for criterion one for dprime
@@ -347,7 +359,7 @@ function [dp_beta, c_beta, statout] = get_betas_and_stats(m)
     c_beta  = nan(1,2);
     
     % d' modulation when the network is ON
-    idx_P2d = ismember( m.CoefficientNames, {'S_1:P', 'S_1:P:V_1'}); 
+    idx_P2d = ismember( m.CoefficientNames, {'S_1:P', 'S_1:P:A_1'}); 
     H(1,idx_P2d) = 1;
     dp_beta(1) = H(1,:) * m.Coefficients.Estimate;
     
@@ -360,9 +372,9 @@ function [dp_beta, c_beta, statout] = get_betas_and_stats(m)
     H(3,:) = H(1,:) - H(2,:);
     
     % criterion modulation when network is ON
-    idx_P2c = ismember( m.CoefficientNames, {'P', 'P:V_1'});
+    idx_P2c = ismember( m.CoefficientNames, {'P', 'P:A_1'});
     H(4,idx_P2c) = -1;
-    idx_P2c = ismember( m.CoefficientNames, {'S_1:P', 'S_1:P:V_1'});
+    idx_P2c = ismember( m.CoefficientNames, {'S_1:P', 'S_1:P:A_1'});
     H(4,idx_P2c) = -1/2;
     c_beta(1) = H(4,:) * m.Coefficients.Estimate;
     
