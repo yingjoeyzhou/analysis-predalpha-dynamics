@@ -284,5 +284,5 @@ if "artefact_reject" in proc_to_run:
         raw = ica.apply(raw)
         
         # Save cleaned data
-        dataset["raw"].save(out_fname, overwrite=True)
+        raw.save(out_fname, overwrite=True)
         
