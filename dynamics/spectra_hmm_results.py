@@ -81,6 +81,7 @@ f, psd, coh, w = spectral.multitaper_spectra(
     time_half_bandwidth=4,
     n_tapers=7,
     frequency_range=[1, 45],
+    calc_coh=True,
     return_weights=True,  # weighting for each subject when we average the spectra
     n_jobs=8,  # parallelisation, if you get a RuntimeError set to 1
 )
