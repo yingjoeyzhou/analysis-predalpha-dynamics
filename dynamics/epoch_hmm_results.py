@@ -31,8 +31,7 @@ def get_best_run():
     print("Best run:", best_run)
     return best_run
 
-#run_id = get_best_run()
-run_id = 1
+run_id = get_best_run()
 
 
 #%% EPOCH DATA WITH THE BEST RUN
